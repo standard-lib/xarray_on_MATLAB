@@ -465,30 +465,40 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                 end
             end
         end
+        
+        function str = charElement(val)
+            if(isnumeric(val))
+                str = sprintf('%g',val);
+            else
+                str = char(string(val));
+            end
+        end
+
         function str = charList(list, separator)
             str = string.empty;
             if(length(list) >= 1)
-                str = char(string(list(1)));
+                str = xarray.DataArray.charElement(list(1));
                 for idx = 2:length(list)
-                    str = [str, separator, char(string(list(idx)))]; %#ok<AGROW> 
+                    str = [str, separator, xarray.DataArray.charElement(list(idx))]; %#ok<AGROW> 
                 end
             end
         end
         function str = charValInLine(vals,maxlength)
+            import xarray.DataArray.charElement
             s = cell(1,3); ind = 1;
             remainLength = maxlength - 3;
             printFormer = 1;
             printLatter = numel(vals);
-            remainLength = remainLength - strlength(string(vals(printFormer))) - strlength(string(vals(printLatter)));
+            remainLength = remainLength - strlength(charElement(vals(printFormer))) - strlength(charElement(vals(printLatter)));
             while(printFormer < printLatter)
-                if(remainLength > strlength(string(vals(printFormer+1))) + 1)
-                    remainLength = remainLength - (strlength(string(vals(printFormer+1))) + 1);
+                if(remainLength > strlength(charElement(vals(printFormer+1))) + 1)
+                    remainLength = remainLength - (strlength(charElement(vals(printFormer+1))) + 1);
                     printFormer = printFormer+1;
                 else
                     break;
                 end
-                if(remainLength > strlength(string(vals(printLatter-1))) + 1)
-                    remainLength = remainLength - (strlength(string(vals(printLatter-1))) + 1);
+                if(remainLength > strlength(charElement(vals(printLatter-1))) + 1)
+                    remainLength = remainLength - (strlength(charElement(vals(printLatter-1))) + 1);
                     printLatter = printLatter-1;
                 else
                     break;
