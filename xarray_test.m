@@ -280,37 +280,37 @@ assert(isscalar(da)==true);
 da = xarray.DataArray([1 2;3 4]);
 da2 = xarray.DataArray(3);
 mult = da*3;
-assert( all(mult.cont_array(:).'==[1 3 2 4]*3));
+assert( all(mult.data(:).'==[1 3 2 4]*3));
 mult = 3*da;
-assert( all(mult.cont_array(:).'==[1 3 2 4]*3));
+assert( all(mult.data(:).'==[1 3 2 4]*3));
 mult = da*da2;
-assert( all(mult.cont_array(:).'==[1 3 2 4]*3));
+assert( all(mult.data(:).'==[1 3 2 4]*3));
 mult = da2*da;
-assert( all(mult.cont_array(:).'==[1 3 2 4]*3));
+assert( all(mult.data(:).'==[1 3 2 4]*3));
 
 %% matrix multiple matrix
 da = xarray.DataArray([1 2 3;3 4 5]);
 da2 = xarray.DataArray([1 2;3 4]);
 answer = [1 2;3 4]*[1 2 3;3 4 5];
 mult = [1 2;3 4]*da;
-assert(all(mult.cont_array==answer,'all'))
+assert(all(mult.data==answer,'all'))
 mult = da2*da;
-assert(all(mult.cont_array==answer,'all'))
+assert(all(mult.data==answer,'all'))
 
 da = xarray.DataArray([1 2 ;3 3; 4 5]);
 da2 = xarray.DataArray([1 2;3 4]);
 answer = [1 2 ;3 3; 4 5]*[1 2;3 4];
 mult = da*[1 2;3 4];
-assert(all(mult.cont_array==answer,'all'))
+assert(all(mult.data==answer,'all'))
 mult = da*da2;
-assert(all(mult.cont_array==answer,'all'))
+assert(all(mult.data==answer,'all'))
 
 %% multiple 2d matrix
 da = xarray.DataArray([1 2 3;3 4 5]);
 da2 = xarray.DataArray([1 2 3;3 4 5]);
 answer = [1 2 3;3 4 5].*[1 2 3;3 4 5];
 mult = da.*da2;
-assert(all(mult.cont_array==answer,'all'))
+assert(all(mult.data==answer,'all'))
 
 %% slice
 da = xarray.DataArray(temperature,...

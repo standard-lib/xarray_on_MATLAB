@@ -1,9 +1,9 @@
 classdef DataArray < matlab.mixin.indexing.RedefinesParen
     properties (Access=public)
-        cont_array % 多次元配列．
-        sz % 整数ベクトル．cont_arrayの各次元の個数としてユーザー側が認識しているもの
-        % 基本的にはsize(cont_array)．ただし，Matlabでは1次元のcont_arrayが存在しないため，1次元を指定された場合のみ，size(cont_array)と異なる．
-        ndims % 整数. cont_arrayの次元の数としてユーザー側が認識しているもの．= numel(sz)
+        data % 多次元配列．
+        sz % 整数ベクトル．dataの各次元の個数としてユーザー側が認識しているもの
+        % 基本的にはsize(data)．ただし，Matlabでは1次元のdataが存在しないため，1次元を指定された場合のみ，size(data)と異なる．
+        ndims % 整数. dataの次元の数としてユーザー側が認識しているもの．= numel(sz)
         ncoords % 整数. 定義されている軸の数．原理上いくらでも．
         dims_name % string配列．dimensionの名前. numel(dims_name)=ndims
         cid % containers.Map 軸名→coords ID
@@ -37,7 +37,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                 for idxDims = 1:temp_ndims
                     obj.dims_name(idxDims) = sprintf("dims_%d",idxDims);
                 end
-                obj.cont_array = data;
+                obj.data = data;
                 obj.ndims = temp_ndims;
             else
                 obj.dims_name = string(argDims);
@@ -48,13 +48,13 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                 end
                 if(temp_ndims == 2 && numel(obj.dims_name) == 1)
                     %Matlabが1次元配列を使えないことによる特殊ケースとして取り扱う
-                    obj.cont_array = data(:); %縦ベクトルにしておく
+                    obj.data = data(:); %縦ベクトルにしておく
                     obj.ndims = 1;
                 else 
                     assert(temp_ndims <= numel(obj.dims_name)...
                         ,'xarray:invaliddimensions'...
                         ,"different number of dimensions on data and specified in dims %d vs %d", temp_ndims, numel(obj.dims_name));
-                    obj.cont_array = data;
+                    obj.data = data;
                     obj.ndims = numel(obj.dims_name);
                 end
             end
@@ -167,9 +167,9 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                     , new_coords{idxAddDim}, new_coords_isSpecified(idxAddDim));
                 % new size setting and expand contained array
                 reshapesize = [obj.sz(1:newcid-1), 1, obj.sz(newcid:end)];
-                obj.cont_array = reshape(obj.cont_array, reshapesize);
+                obj.data = reshape(obj.data, reshapesize);
                 newsize = [obj.sz(1:newcid-1), numel(coord), obj.sz(newcid:end)];
-                obj.cont_array = xarray.DataArray.extendArray(obj.cont_array, num2cell(newsize));
+                obj.data = xarray.DataArray.extendArray(obj.data, num2cell(newsize));
             end
 
         end
@@ -216,7 +216,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                 obj.coords{idxCoords} = obj.coords{idxCoords}(subs{:});
             end
             % slice of contained array
-            obj.cont_array = obj.cont_array(indices{:});
+            obj.data = obj.data(indices{:});
             obj.sz = obj.csize();
         end
 
@@ -251,16 +251,16 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
             if isscalar(indexOp)
                 assert(nargin==3);
                 rhs = varargin{1};
-                obj.cont_array = xarray.DataArray.extendArray(obj.cont_array, indexOp.Indices);
-                if(~(obj.ndims == 1 && size(obj.cont_array,2) == 1) && ...
-                        obj.ndims < numel(size(obj.cont_array)))
+                obj.data = xarray.DataArray.extendArray(obj.data, indexOp.Indices);
+                if(~(obj.ndims == 1 && size(obj.data,2) == 1) && ...
+                        obj.ndims < numel(size(obj.data)))
                 % dimensionが追加された場合：
-                    for idxAdditionalDim = obj.ndims+1:numel(size(obj.cont_array))
+                    for idxAdditionalDim = obj.ndims+1:numel(size(obj.data))
                         obj.sz = obj.csize();
                         obj = obj.expand_single_dim('', idxAdditionalDim, 1:obj.sz(idxAdditionalDim), false);
                     end
                 end
-                obj.cont_array.(indexOp) = double(rhs);
+                obj.data.(indexOp) = double(rhs);
                 obj.sz = obj.csize();
                 for idxCoord = 1:obj.ncoords
                     obj.coords{idxCoord} = xarray.DataArray.extendArray(obj.coords{idxCoord},num2cell(obj.sz(obj.coords_dims(idxCoord,:))));
@@ -281,7 +281,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
         end
 
         function obj = parenDelete(obj,indexOp)
-            obj.cont_array.(indexOp) = [];
+            obj.data.(indexOp) = [];
             % 各coordsのsliceの計算
             for idxCoords = 1:obj.ncoords
                 subs = indexOp(1).Indices(obj.coords_dims(idxCoords,:));
@@ -297,11 +297,11 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
     % mathematical methods
     methods (Access=public)
         function out = value(obj)
-            out = obj.cont_array;
+            out = obj.data;
         end
         
         function c = double(obj)
-            c = obj.cont_array;
+            c = obj.data;
         end
         
         function r = mtimes(obj1,obj2)
@@ -317,10 +317,10 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
             prodmat = obj1mat*obj2mat;
             if(isa(obj1, 'xarray.DataArray') && size(obj2mat,1) == size(obj2mat,2))
                 r = obj1;
-                r.cont_array = prodmat;
+                r.data = prodmat;
             elseif(isa(obj2, 'xarray.DataArray') && size(obj1mat,1) == size(obj1mat,2))
                 r = obj2;
-                r.cont_array = prodmat;
+                r.data = prodmat;
             else
                 r = prodmatt;
             end
@@ -334,11 +334,11 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
             else
                 r = obj2;
             end
-            r.cont_array = obj1mat.*obj2mat;
+            r.data = obj1mat.*obj2mat;
         end
 
         function out = sum(obj)
-            out = sum(obj.cont_array,"all");
+            out = sum(obj.data,"all");
         end
         
         function out = cat(dim,varargin)
@@ -355,8 +355,8 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
         end
 
         function varargout = size(obj,varargin)
-            %このsize参照に限っては実際のcont_arrayのサイズを返す
-            [varargout{1:nargout}] = size(obj.cont_array,varargin{:});
+            %このsize参照に限っては実際のdataのサイズを返す
+            [varargout{1:nargout}] = size(obj.data,varargin{:});
         end
         
         function str = char(obj)
@@ -370,7 +370,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
             end
             s(ind) = {')>\n'}; ind=ind+1;
             
-            s(ind) = {xarray.DataArray.charPages(obj.cont_array, obj.sz)}; ind=ind+1;
+            s(ind) = {xarray.DataArray.charPages(obj.data, obj.sz)}; ind=ind+1;
             
             if(any(obj.coords_isSpecified))
                 s(ind) = {'Coordinates:\n'}; ind=ind+1;
@@ -444,7 +444,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
         end
 
         function sz = csize(obj)
-            sz = [size(obj.cont_array), ones(1,obj.ndims-numel(size(obj.cont_array)))];
+            sz = [size(obj.data), ones(1,obj.ndims-numel(size(obj.data)))];
         end
     end
 
