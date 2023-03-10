@@ -1,0 +1,3 @@
+<xarray.DataArray (dims_1: 0, dims_2: 1, dims_3: 0)>
+	empty array:0x1x0 double
+Dimensions without coordinates: dims_1, dims_2, dims_3

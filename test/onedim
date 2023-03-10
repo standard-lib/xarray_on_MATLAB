@@ -1,0 +1,21 @@
+<xarray.DataArray (x: 3)>
+	[2
+	 4
+	 6]
+Coordinates:
+  * x        (x) double 0.5 1 1.5
+<xarray.DataArray (x: 2)>
+	[4
+	 6]
+Coordinates:
+  * x        (x) double 1 1.5
+<xarray.DataArray (x: 2)>
+	[2
+	 6]
+Coordinates:
+  * x        (x) double 0.5 1.5
+<xarray.DataArray (x: 2)>
+	[2
+	 6]
+Coordinates:
+  * x        (x) double 0.5 1.5

@@ -1,0 +1,4 @@
+<xarray.DataArray (x: 1)>
+	[2]
+Coordinates:
+  * x        (x) double 0.5

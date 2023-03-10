@@ -1,0 +1,13 @@
+<xarray.DataArray (x: 3, y: 3, dims_3: 2)>
+(:,:,1) =
+	[1 2 NaN
+	 3 4 NaN
+	 NaN NaN NaN]
+(:,:,2) =
+	[NaN NaN NaN
+	 NaN NaN NaN
+	 NaN NaN 1]
+Coordinates:
+  * x        (x) double 3.4 3.5 NaN
+  * y        (y) double 1.1 1.4 NaN
+Dimensions without coordinates: dims_3

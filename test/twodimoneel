@@ -1,0 +1,5 @@
+<xarray.DataArray (x: 1, y: 1)>
+	[2]
+Coordinates:
+  * x        (x) double 0.5
+Dimensions without coordinates: y
