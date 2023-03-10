@@ -113,6 +113,23 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
             obj.CheckConsistency();
         end
         
+        function obj = sel(obj, varargin)
+            keywords = ["method", "tolerance"];
+            subs = cellstr(repmat(":",[1, numel(obj.sz)]));
+            for i = 1:2:nargin-1
+                if(strcmp(keywords, varargin{i}))
+                    continue;
+                end
+                assert(isKey(obj.cid, varargin{i}), 'xarray:invaliddimname', '%s is not a dimension name', varargin{i});
+                id = obj.cid(varargin{i});
+                assert(id <= obj.ndims, 'xarray:invaliddimname', '%s is a coordinate, but not a dimension', varargin{i});
+                val = varargin{i+1};
+                val = transpose(val(:));
+                subs{id} = logical(sum(obj.coords{id}==val,2)); %exact matching mode;
+            end
+            obj = obj.slice(subs);
+        end
+
         function obj = expand_dims(obj, NameValueArgs)
             arguments
                 obj
@@ -191,6 +208,18 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
     end
 
     methods (Access=protected)
+
+        function obj = slice(obj, indices)
+            % slice of coordinates
+            for idxCoords = 1:obj.ncoords
+                subs = indices(obj.coords_dims(idxCoords,:));
+                obj.coords{idxCoords} = obj.coords{idxCoords}(subs{:});
+            end
+            % slice of contained array
+            obj.cont_array = obj.cont_array(indices{:});
+            obj.sz = obj.csize();
+        end
+
         function varargout = parenReference(obj, indexOp)
             assert(numel(obj.dims_name) == numel(indexOp(1).Indices) || numel(indexOp(1).Indices) == 1)
             % 各coordsのsliceの計算
@@ -206,14 +235,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                     indices(2) = {1}; %縦ベクトルになる
                 end
             end
-            for idxCoords = 1:obj.ncoords
-                subs = indices(obj.coords_dims(idxCoords,:));
-                obj.coords{idxCoords} = obj.coords{idxCoords}(subs{:});
-            end
-            % データ配列のslice
-%             obj.cont_array = obj.cont_array.(indexOp(1));
-            obj.cont_array = obj.cont_array(indices{:});
-            obj.sz = obj.csize();
+            obj = obj.slice(indices);
             if isscalar(indexOp)
                 varargout{1} = obj;
                 return;
@@ -366,7 +388,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                     s(ind) = {sprintf('%-9s', obj.coords_name(idxCoord))}; ind = ind+1;
                     if(any(obj.coords_dims(idxCoord,:)))
                         s(ind) = {'('}; ind = ind+1;
-                        s(ind) = {xarray.DataArray.charList('%s', obj.dims_name(obj.coords_dims(idxCoord,:)), ', ')}; ind = ind+1;
+                        s(ind) = {xarray.DataArray.charListWithFS('%s', obj.dims_name(obj.coords_dims(idxCoord,:)), ', ')}; ind = ind+1;
                         s(ind) = {')'}; ind = ind+1;
                     end
                     % class name of coordinate
@@ -379,7 +401,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
 
             if(~all(obj.coords_isSpecified(1:obj.ndims)))
                 s(ind) = {'Dimensions without coordinates: '}; ind = ind+1;
-                s(ind) = {xarray.DataArray.charList('%s', obj.dims_name(~obj.coords_isSpecified(1:obj.ndims)),', ')}; ind = ind+1;
+                s(ind) = {xarray.DataArray.charListWithFS('%s', obj.dims_name(~obj.coords_isSpecified(1:obj.ndims)),', ')}; ind = ind+1;
                 s(ind) = {'\n'}; ind = ind+1;
             end
             str = [s{1:ind-1}];
@@ -408,15 +430,15 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                     "xarray:invalidcoorddims",...
                     "size('%s')=%s is different from %s",...
                     obj.coords_name(idxCoords), ...
-                    xarray.DataArray.charList('%d', coordSize, 'x'),...
-                    xarray.DataArray.charList('%d', dimSize, 'x')...
+                    xarray.DataArray.charListWithFS('%d', coordSize, 'x'),...
+                    xarray.DataArray.charListWithFS('%d', dimSize, 'x')...
                     );
                 assert(all(coordSize == dimSize),...
                     "xarray:invalidcoorddims",...
                     "size('%s')=%s is different from %s",...
                     obj.coords_name(idxCoords), ...
-                    xarray.DataArray.charList('%d', coordSize, 'x'),...
-                    xarray.DataArray.charList('%d', dimSize, 'x')...
+                    xarray.DataArray.charListWithFS('%d', coordSize, 'x'),...
+                    xarray.DataArray.charListWithFS('%d', dimSize, 'x')...
                     )
             end
         end
@@ -434,7 +456,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
 
 
     methods(Static, Access = private)
-        function str = charList(formatSpec, list, separator)
+        function str = charListWithFS(formatSpec, list, separator)
             str = string.empty;
             if(length(list) >= 1)
                 str = sprintf( formatSpec, list(1));
@@ -443,34 +465,43 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
                 end
             end
         end
+        function str = charList(list, separator)
+            str = string.empty;
+            if(length(list) >= 1)
+                str = char(string(list(1)));
+                for idx = 2:length(list)
+                    str = [str, separator, char(string(list(idx)))]; %#ok<AGROW> 
+                end
+            end
+        end
         function str = charValInLine(vals,maxlength)
             s = cell(1,3); ind = 1;
             remainLength = maxlength - 3;
             printFormer = 1;
             printLatter = numel(vals);
-            remainLength = remainLength - strlength(sprintf("%g%g", vals(printFormer), vals(printLatter)));
+            remainLength = remainLength - strlength(string(vals(printFormer))) - strlength(string(vals(printLatter)));
             while(printFormer < printLatter)
-                if(remainLength > strlength(sprintf("%g",vals(printFormer+1))) + 1)
-                    remainLength = remainLength - (strlength(sprintf("%g",vals(printFormer+1))) + 1);
+                if(remainLength > strlength(string(vals(printFormer+1))) + 1)
+                    remainLength = remainLength - (strlength(string(vals(printFormer+1))) + 1);
                     printFormer = printFormer+1;
                 else
                     break;
                 end
-                if(remainLength > strlength(sprintf("%g",vals(printLatter-1))) + 1)
-                    remainLength = remainLength - (strlength(sprintf("%g",vals(printLatter-1))) + 1);
+                if(remainLength > strlength(string(vals(printLatter-1))) + 1)
+                    remainLength = remainLength - (strlength(string(vals(printLatter-1))) + 1);
                     printLatter = printLatter-1;
                 else
                     break;
                 end
             end
             if(printFormer+1 < printLatter)
-                s(ind) = {xarray.DataArray.charList('%g', vals(1:printFormer), ' ')};
+                s(ind) = {xarray.DataArray.charList(vals(1:printFormer), ' ')};
                 ind = ind+1;
                 s(ind) = {' ... '}; ind = ind+1;
-                s(ind) = {xarray.DataArray.charList('%g', vals(printLatter:end), ' ')};
+                s(ind) = {xarray.DataArray.charList(vals(printLatter:end), ' ')};
                 ind = ind+1;
             else
-                s(ind) = {xarray.DataArray.charList('%g', vals(1:end), ' ')};
+                s(ind) = {xarray.DataArray.charList(vals(1:end), ' ')};
                 ind = ind+1;
             end
             str = [s{1:ind-1}];
@@ -540,7 +571,7 @@ classdef DataArray < matlab.mixin.indexing.RedefinesParen
             str = [s{1:ind-1}];
         end
         function str = charEmpty(vals)
-            str = ['\tempty array:', xarray.DataArray.charList('%d',size(vals),'x'), ' ', class(vals), '\n'];
+            str = ['\tempty array:', xarray.DataArray.charListWithFS('%d',size(vals),'x'), ' ', class(vals), '\n'];
         end
         function arr = extendArray(arr, newIndices)
             currentSize = size(arr);
