@@ -276,6 +276,7 @@ end
 assert(flgIdentical);
 assert(isscalar(da)==true);
 
+
 %% matrix multiple scalar
 da = xarray.DataArray([1 2;3 4]);
 da2 = xarray.DataArray(3);
